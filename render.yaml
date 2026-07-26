@@ -8,6 +8,7 @@ services:
     name: torbot
     runtime: node
     plan: free
+    region: frankfurt
     buildCommand: cd client && npm install && npm run build && cd ../server && npm install
     startCommand: cd server && node index.js
     healthCheckPath: /api/health
