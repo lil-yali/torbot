@@ -1,0 +1,38 @@
+# Render blueprint — one web service that builds the React dashboard and runs the server
+# (the server also serves the built site, so it's a single deployment).
+#
+# After connecting this repo in Render, set the secret values (DATABASE_URL, GROQ_API_KEY,
+# Twilio keys) in the dashboard — they are intentionally not stored here.
+services:
+  - type: web
+    name: torbot
+    runtime: node
+    plan: free
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: cd server && node index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: USE_LOCAL_DB
+        value: "false"
+      - key: TZ
+        value: Asia/Jerusalem
+      - key: NODE_VERSION
+        value: "20"
+      - key: JWT_SECRET
+        generateValue: true      # Render generates a strong random secret
+      - key: DATABASE_URL
+        sync: false              # paste your Neon connection string in the dashboard
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        value: whatsapp:+14155238886
+      - key: SANDBOX_BUSINESS_PHONE
+        sync: false              # your business number, e.g. +972504732111 (empty for multi-tenant)
+      - key: VALIDATE_TWILIO
+        value: "false"       # turn on AFTER you set PUBLIC_WEBHOOK_URL to the real URL
+      - key: PUBLIC_WEBHOOK_URL
+        sync: false              # https://<your-service>.onrender.com/webhook

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit real credentials
+.env
+.env.local
+server/.env
+server/.env.local
+
+# Local PGlite database (on-disk data)
+server/db/local-data/
+
+# Build output
+client/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
