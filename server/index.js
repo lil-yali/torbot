@@ -107,7 +107,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
 app.get('/api/settings', auth, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT name, phone, working_hours, slot_duration, max_days_ahead, owner_phone FROM businesses WHERE phone = $1`,
+      `SELECT name, phone, working_hours, slot_duration, max_days_ahead, owner_phone, whatsapp_number FROM businesses WHERE phone = $1`,
       [req.businessPhone]
     );
     res.json(r.rows[0] || {});
@@ -117,15 +117,16 @@ app.get('/api/settings', auth, async (req, res) => {
 });
 
 app.post('/api/settings', auth, async (req, res) => {
-  const { workingDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone } = req.body;
+  const { workingDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone, whatsappNumber } = req.body;
   try {
     await pool.query(
-      `UPDATE businesses SET working_hours = $1, slot_duration = $2, max_days_ahead = $3, owner_phone = $4 WHERE phone = $5`,
+      `UPDATE businesses SET working_hours = $1, slot_duration = $2, max_days_ahead = $3, owner_phone = $4, whatsapp_number = $5 WHERE phone = $6`,
       [
         JSON.stringify({ days: workingDays, start: startTime, end: endTime }),
         Number(slotDuration) || 30,
         Number(maxDaysAhead) || 30,
         ownerPhone ? normalizePhone(ownerPhone) : null,
+        whatsappNumber ? normalizePhone(whatsappNumber) : null,
         req.businessPhone,
       ]
     );
@@ -292,6 +293,10 @@ app.post('/api/change-password', auth, async (req, res) => {
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ---- Legal pages ----
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'privacy.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, 'legal', 'terms.html')));
 
 // ---- Local test chat (no Twilio needed): talk to the bot's AI brain directly ----
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));

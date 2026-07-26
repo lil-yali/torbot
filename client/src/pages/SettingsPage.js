@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [slotDuration, setSlotDuration] = useState(30);
   const [maxDaysAhead, setMaxDaysAhead] = useState(30);
   const [ownerPhone, setOwnerPhone] = useState('');
+  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [exceptions, setExceptions] = useState({ blocked: [], overrides: [] });
@@ -34,6 +35,7 @@ export default function SettingsPage() {
         if (data.slot_duration) setSlotDuration(data.slot_duration);
         if (data.max_days_ahead) setMaxDaysAhead(data.max_days_ahead);
         if (data.owner_phone) setOwnerPhone(data.owner_phone);
+        if (data.whatsapp_number) setWhatsappNumber(data.whatsapp_number);
       } catch { /* first-time setup: keep defaults */ }
       loadExceptions();
     })();
@@ -50,7 +52,7 @@ export default function SettingsPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      await api.post('/api/settings', { workingDays: selectedDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone });
+      await api.post('/api/settings', { workingDays: selectedDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone, whatsappNumber });
       navigate('/calendar');
     } catch { alert('שגיאה בשמירה'); }
     finally { setSaving(false); }
@@ -116,6 +118,9 @@ export default function SettingsPage() {
 
           <p className="field-label" style={{ marginTop: 12 }}>מספר הוואטסאפ שלך לניהול דרך הבוט</p>
           <input type="tel" className="input" placeholder="+972..." value={ownerPhone} onChange={e => setOwnerPhone(e.target.value)} />
+
+          <p className="field-label" style={{ marginTop: 12 }}>מספר הוואטסאפ העסקי (שהלקוחות כותבים אליו)</p>
+          <input type="tel" className="input" placeholder="+972... (לרוב עסקים)" value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} />
 
           <button className="btn" onClick={handleSave} disabled={saving}>{saving ? 'שומר…' : 'שמור ←'}</button>
         </div>

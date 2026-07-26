@@ -23,11 +23,21 @@ async function runReminderSweep() {
        AND a.datetime > NOW() AND a.datetime <= NOW() + INTERVAL '24 hours'`
   );
 
+  const TEMPLATE_SID = process.env.REMINDER_TEMPLATE_SID; // approved WhatsApp template (production)
   for (const apt of rows) {
     const body = `תזכורת מ${apt.business_name ? '־' + apt.business_name : ' TorBot'}: יש לך תור ב${formatHe(apt.datetime)}. נתראה! 😊`;
     try {
-      if (DRY_RUN) console.log(`[reminder:dry-run] → ${apt.customer_phone}: ${body}`);
-      else await sendWhatsApp(apt.customer_phone, body);
+      if (DRY_RUN) {
+        console.log(`[reminder:dry-run] → ${apt.customer_phone}: ${body}`);
+      } else if (TEMPLATE_SID) {
+        // Business-initiated message via an approved template (required outside the 24h window).
+        await sendWhatsApp(apt.customer_phone, body, undefined, {
+          contentSid: TEMPLATE_SID,
+          contentVariables: { 1: apt.customer_name || 'לקוח', 2: formatHe(apt.datetime), 3: apt.business_name || '' },
+        });
+      } else {
+        await sendWhatsApp(apt.customer_phone, body);
+      }
     } catch (e) {
       console.error('Reminder send failed for', apt.id, e.message);
     }

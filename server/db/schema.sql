@@ -2,17 +2,26 @@
 -- Reconstructed from application code, extended for reliability features.
 
 CREATE TABLE IF NOT EXISTS businesses (
-  phone          TEXT PRIMARY KEY,
-  name           TEXT,
-  password       TEXT,
-  working_hours  JSONB,
-  slot_duration  INTEGER DEFAULT 30,
-  max_days_ahead INTEGER DEFAULT 30,
-  owner_phone    TEXT
+  phone           TEXT PRIMARY KEY,
+  name            TEXT,
+  password        TEXT,
+  working_hours   JSONB,
+  slot_duration   INTEGER DEFAULT 30,
+  max_days_ahead  INTEGER DEFAULT 30,
+  owner_phone     TEXT,
+  whatsapp_number TEXT
 );
 
--- Migration for pre-existing databases (idempotent).
-ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_phone TEXT;
+-- Migrations for pre-existing databases (idempotent).
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_phone     TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+
+-- Bot conversation state, so it survives restarts / works across instances.
+CREATE TABLE IF NOT EXISTS conversations (
+  key        TEXT PRIMARY KEY,
+  data       JSONB,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS customers (
   phone TEXT PRIMARY KEY,

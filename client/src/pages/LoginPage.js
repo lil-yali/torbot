@@ -44,6 +44,11 @@ export default function LoginPage({ setIsLoggedIn }) {
           <button className="btn" type="submit" disabled={loading}>{loading ? 'מתחבר…' : 'התחברות'}</button>
         </form>
         <span className="link" onClick={() => navigate('/register')}>אין לך חשבון? הרשם</span>
+        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 12 }}>
+          <a href="/privacy" style={{ color: 'var(--text-muted)' }}>מדיניות פרטיות</a>
+          <span style={{ color: 'var(--text-muted)', margin: '0 8px' }}>·</span>
+          <a href="/terms" style={{ color: 'var(--text-muted)' }}>תנאי שימוש</a>
+        </div>
       </div>
     </div>
   );

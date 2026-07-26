@@ -28,16 +28,50 @@ async function groqChat(params, retries = 2) {
 }
 
 // Per-conversation memory: { messages: [...], name: string|null }
+// Cached in memory (fast) AND persisted to the DB (survives restarts / redeploys).
 const conversations = {};
 const MAX_HISTORY = 12;
 
-function getConversation(key) {
-  if (!conversations[key]) conversations[key] = { messages: [], name: null };
+async function loadConversation(key) {
+  if (conversations[key]) return conversations[key];
+  try {
+    const r = await require('../db/index').query('SELECT data FROM conversations WHERE key = $1', [key]);
+    if (r.rows[0]) {
+      const data = typeof r.rows[0].data === 'string' ? JSON.parse(r.rows[0].data) : r.rows[0].data;
+      conversations[key] = { messages: data.messages || [], name: data.name || null };
+      return conversations[key];
+    }
+  } catch (e) { /* fall through to a fresh conversation */ }
+  conversations[key] = { messages: [], name: null };
   return conversations[key];
 }
 
-function resetConversation({ customerPhone, businessPhone }) {
-  delete conversations[`${customerPhone}-${businessPhone}`];
+async function saveConversation(key, conv) {
+  try {
+    await require('../db/index').query(
+      `INSERT INTO conversations (key, data, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET data = $2, updated_at = NOW()`,
+      [key, JSON.stringify({ messages: conv.messages.slice(-MAX_HISTORY * 2), name: conv.name })]
+    );
+  } catch (e) { console.error('saveConversation failed:', e.message); }
+}
+
+async function resetConversation({ customerPhone, businessPhone }) {
+  const key = `${normalizePhone(customerPhone)}-${normalizePhone(businessPhone)}`;
+  delete conversations[key];
+  try { await require('../db/index').query('DELETE FROM conversations WHERE key = $1', [key]); } catch { /* ignore */ }
+}
+
+// Resolve which business an inbound message belongs to. A business can be identified by its
+// login phone OR its dedicated WhatsApp number (the number customers actually message).
+async function resolveBusinessPhone(incoming) {
+  const norm = normalizePhone(incoming);
+  const pool = require('../db/index');
+  let r = await pool.query('SELECT phone FROM businesses WHERE phone = $1', [norm]);
+  if (r.rows[0]) return r.rows[0].phone;
+  r = await pool.query('SELECT phone FROM businesses WHERE whatsapp_number = $1', [norm]);
+  if (r.rows[0]) return r.rows[0].phone;
+  return norm; // unknown business — fall back to the raw number
 }
 
 // ---------- helpers ----------
@@ -397,16 +431,17 @@ ${aptsList}
 }
 
 // ---------- entry point ----------
-async function handleIncomingMessage({ customerPhone, businessPhone, message }) {
-  const key = `${customerPhone}-${businessPhone}`;
-  const conv = getConversation(key);
+async function handleIncomingMessage({ customerPhone, businessPhone: rawBusiness, message }) {
+  const key = `${normalizePhone(customerPhone)}-${normalizePhone(rawBusiness)}`;
+  const conv = await loadConversation(key);
   conv.messages.push({ role: 'user', content: message });
 
+  // Figure out which business this message is for (by login phone or dedicated WhatsApp number).
+  const businessPhone = await resolveBusinessPhone(rawBusiness);
   const pool = require('../db/index');
-  // The sender is the owner if their WhatsApp number matches the business's owner_phone
-  // (or the business's own login phone, for non-sandbox setups).
+  // The sender is the owner if their number matches the business's owner_phone (or login phone).
   const bizRow = (await pool.query(
-    `SELECT phone, owner_phone FROM businesses WHERE phone = $1`, [normalizePhone(businessPhone)]
+    `SELECT phone, owner_phone FROM businesses WHERE phone = $1`, [businessPhone]
   )).rows[0];
   const from = normalizePhone(customerPhone);
   const isOwner = !!bizRow && (from === normalizePhone(bizRow.owner_phone) || from === normalizePhone(bizRow.phone));
@@ -423,6 +458,7 @@ async function handleIncomingMessage({ customerPhone, businessPhone, message }) 
 
   conv.messages.push({ role: 'assistant', content: reply });
   if (conv.messages.length > MAX_HISTORY * 2) conv.messages = conv.messages.slice(-MAX_HISTORY * 2);
+  await saveConversation(key, conv);
   return reply;
 }
 
