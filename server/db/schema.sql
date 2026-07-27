@@ -13,8 +13,9 @@ CREATE TABLE IF NOT EXISTS businesses (
 );
 
 -- Migrations for pre-existing databases (idempotent).
-ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_phone     TEXT;
-ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_phone       TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp_number   TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS reminders_enabled BOOLEAN DEFAULT FALSE;
 
 -- Bot conversation state, so it survives restarts / works across instances.
 CREATE TABLE IF NOT EXISTS conversations (

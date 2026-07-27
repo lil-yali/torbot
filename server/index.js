@@ -2,6 +2,10 @@
 // always mean Israel time, regardless of where the server runs (local vs. cloud/UTC).
 process.env.TZ = process.env.TZ || 'Asia/Jerusalem';
 
+// Log crashes instead of dying silently (visible in the host's logs).
+process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]', reason));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
@@ -36,7 +40,13 @@ const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 200, standardHeaders: t
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'too_many_attempts' } });
 const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
 // Health check (unlimited — used by the host to know the service is alive).
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+// Also verifies the database is reachable, so a broken DB shows up as unhealthy.
+app.get('/api/health', async (req, res) => {
+  const health = { ok: true, time: new Date().toISOString() };
+  try { await pool.query('SELECT 1'); health.db = 'ok'; }
+  catch (e) { health.ok = false; health.db = 'error'; }
+  res.status(health.ok ? 200 : 503).json(health);
+});
 
 app.use('/api/', apiLimiter);
 
@@ -107,7 +117,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
 app.get('/api/settings', auth, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT name, phone, working_hours, slot_duration, max_days_ahead, owner_phone, whatsapp_number FROM businesses WHERE phone = $1`,
+      `SELECT name, phone, working_hours, slot_duration, max_days_ahead, owner_phone, whatsapp_number, reminders_enabled FROM businesses WHERE phone = $1`,
       [req.businessPhone]
     );
     res.json(r.rows[0] || {});
@@ -117,16 +127,17 @@ app.get('/api/settings', auth, async (req, res) => {
 });
 
 app.post('/api/settings', auth, async (req, res) => {
-  const { workingDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone, whatsappNumber } = req.body;
+  const { workingDays, startTime, endTime, slotDuration, maxDaysAhead, ownerPhone, whatsappNumber, remindersEnabled } = req.body;
   try {
     await pool.query(
-      `UPDATE businesses SET working_hours = $1, slot_duration = $2, max_days_ahead = $3, owner_phone = $4, whatsapp_number = $5 WHERE phone = $6`,
+      `UPDATE businesses SET working_hours = $1, slot_duration = $2, max_days_ahead = $3, owner_phone = $4, whatsapp_number = $5, reminders_enabled = $6 WHERE phone = $7`,
       [
         JSON.stringify({ days: workingDays, start: startTime, end: endTime }),
         Number(slotDuration) || 30,
         Number(maxDaysAhead) || 30,
         ownerPhone ? normalizePhone(ownerPhone) : null,
         whatsappNumber ? normalizePhone(whatsappNumber) : null,
+        !!remindersEnabled,
         req.businessPhone,
       ]
     );
@@ -330,6 +341,13 @@ if (fs.existsSync(clientBuild)) {
   });
   console.log('Serving client build from', clientBuild);
 }
+
+// Global error handler — log and return a clean error instead of crashing.
+app.use((err, req, res, next) => {
+  console.error('[express-error]', req.method, req.path, err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'server_error' });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

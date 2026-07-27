@@ -222,6 +222,34 @@ h2 {
   font-size: 15px;
 }
 
+/* ---- toggle row ---- */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text);
+}
+.toggle-row input { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+
+/* ---- onboarding card ---- */
+.onboard-card {
+  background: linear-gradient(135deg, #1c2408, var(--surface));
+  border: 1px solid var(--accent-dark);
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 32px;
+}
+.onboard-card h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  margin-bottom: 14px;
+}
+.onboard-card ol { margin: 0; padding-inline-start: 20px; }
+.onboard-card li { margin-bottom: 12px; line-height: 1.6; }
+.onboard-card .link { display: inline; margin: 0; }
+
 .field-label {
   color: var(--text-muted);
   font-size: 13px;

@@ -18,8 +18,9 @@ async function runReminderSweep() {
   const { rows } = await pool.query(
     `SELECT a.*, b.name AS business_name
      FROM appointments a
-     LEFT JOIN businesses b ON b.phone = a.business_phone
+     JOIN businesses b ON b.phone = a.business_phone
      WHERE a.status = 'confirmed' AND a.reminded = FALSE
+       AND b.reminders_enabled = TRUE
        AND a.datetime > NOW() AND a.datetime <= NOW() + INTERVAL '24 hours'`
   );
 

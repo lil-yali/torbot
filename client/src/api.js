@@ -7,6 +7,8 @@ const baseURL = process.env.REACT_APP_API_URL !== undefined
   ? process.env.REACT_APP_API_URL
   : (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 
+export const API_BASE = baseURL; // e.g. for linking to server-served pages like /chat
+
 // Central API client. Automatically attaches the login token to every request.
 const api = axios.create({ baseURL });
 

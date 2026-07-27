@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { API_BASE } from '../api';
 
 const HE_DOW = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 const HE_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
@@ -147,6 +147,17 @@ export default function CalendarPage({ setIsLoggedIn }) {
         <div className="stat-card"><div className="stat-num">{weekCount}</div><div className="stat-label">השבוע</div></div>
         <div className="stat-card"><div className="stat-num">{appointments.length}</div><div className="stat-label">סה"כ קרובים</div></div>
       </div>
+
+      {!loading && appointments.length === 0 && (
+        <div className="onboard-card">
+          <h3>ברוך הבא ל-TorBot 👋 בוא נתחיל</h3>
+          <ol>
+            <li><b>הגדר את שעות הפעילות</b> — ימי עבודה, שעות ומשך תור. <span className="link" onClick={() => navigate('/settings')}>להגדרות ←</span></li>
+            <li><b>נסה את הבוט</b> — דבר איתו כמו לקוח וכמו בעל עסק. <a className="link" href={`${API_BASE}/chat`} target="_blank" rel="noreferrer">פתח צ'אט בדיקה ←</a></li>
+            <li><b>שתף את מספר הוואטסאפ שלך</b> עם הלקוחות — הם פשוט כותבים והבוט קובע להם תור.</li>
+          </ol>
+        </div>
+      )}
 
       <div className="section-head">
         <div className="view-toggle">
